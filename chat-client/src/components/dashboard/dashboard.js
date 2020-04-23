@@ -48,9 +48,6 @@ class DashboardComponent extends React.Component {
               chat={this.state.chats[this.state.selectedChat]}>
             </ChatViewComponent>
           }
-          { 
-            this.state.selectedChat !== null && !this.state.newChatFormVisible ? <ChatTextBoxComponent userClickedInputFn={this.messageRead} submitMessageFn={this.submitMessage}></ChatTextBoxComponent> : null 
-          }
           {
             this.state.newChatFormVisible ? <NewChatComponent goToChatFn={this.goToChat} newChatSubmitFn={this.newChatSubmit}></NewChatComponent> : null
           }
