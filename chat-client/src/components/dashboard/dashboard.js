@@ -8,7 +8,7 @@ import { Button, withStyles } from '@material-ui/core';
 import axios from 'axios'
 import { withRouter } from 'react-router-dom';
 
-const client = new WebSocket("ws://localhost:8080/WAR2020/ws");
+const client = "ws://localhost:8080/WAR2020/ws/"
 
 class DashboardComponent extends React.Component {
 
@@ -21,7 +21,7 @@ class DashboardComponent extends React.Component {
       friends: [],
       chats: [],
       user: {}
-    };
+      };
   }
 
   websocket;
@@ -47,6 +47,9 @@ class DashboardComponent extends React.Component {
               user={loggedInUser} 
               chat={this.state.chats[this.state.selectedChat]}>
             </ChatViewComponent>
+          }
+          { 
+            this.state.selectedChat !== null && !this.state.newChatFormVisible ? <ChatTextBoxComponent userClickedInputFn={this.messageRead} submitMessageFn={this.submitMessage} receiver={this.state.chats[this.state.selectedChat].participants.filter(_usr => _usr !== localStorage.getItem('loginInfo'))[0]}></ChatTextBoxComponent> : null 
           }
           {
             this.state.newChatFormVisible ? <NewChatComponent goToChatFn={this.goToChat} newChatSubmitFn={this.newChatSubmit}></NewChatComponent> : null
@@ -123,51 +126,34 @@ class DashboardComponent extends React.Component {
 
   clickedMessageWhereNotSender = (chatIndex) => this.state.chats[chatIndex].messages[this.state.chats[chatIndex].messages.length - 1].sender !== localStorage.getItem("loginInfo");
 
-  componentDidMount() {
-    axios.get("http://localhost:8080/WAR2020/rest/chat/chats/" + localStorage.getItem('loginInfo'))
-    .then(response => {
-      console.log(response.data);
-      this.setState({chats: response.data})
-    });
-
-    client.onopen = () => {
-      console.log('connected');
-      axios.get("http://localhost:8080/WAR2020/rest/chat/chats/" + localStorage.getItem('loginInfo'))
-    .then(response => {
-      console.log(response.data);
-      this.setState({chats: response.data})
-    });
-    }
-
-    client.onmessage = evt => {
-      console.log('it works!!!');
-      axios.get("http://localhost:8080/WAR2020/rest/chat/chats/" + localStorage.getItem('loginInfo'))
-    .then(response => {
-      console.log(response.data);
-      this.setState({chats: response.data})
-    });
-    }
-
-    client.onclose = () => {
-      this.signOut();
-      console.log('disconnected')
-    }
-  }
-
   componentWillMount() {
 
-    client.onmessage = evt => {
-      console.log('it works!!!');
+    this.websocket = new WebSocket(client + localStorage.getItem('loginInfo'));
+
+    this.websocket.onopen = () => {
+      console.log('connected ' + localStorage.getItem('loginInfo'))
       axios.get("http://localhost:8080/WAR2020/rest/chat/chats/" + localStorage.getItem('loginInfo'))
-    .then(response => {
-      console.log(response.data);
-      this.setState({chats: response.data})
-    });
+      .then(response => {
+        console.log(response.data);
+        this.setState({chats: response.data})
+      });
     }
 
-    client.onclose = () => {
-      this.signOut();
-      console.log('disconnected')
+    this.websocket.onmessage = evt => {
+        // on receiving a message, add it to the list of messages
+        console.log('sent')
+        axios.get("http://localhost:8080/WAR2020/rest/chat/chats/" + localStorage.getItem('loginInfo'))
+        .then(response => {
+          console.log(response.data);
+          this.setState({chats: response.data})
+        });
+    }
+
+    this.websocket.onclose = () => {
+        console.log('disconnected')
+        this.setState({
+            websocket: new WebSocket(client + localStorage.getItem('loginInfo')),
+        })
     }
   }
 }

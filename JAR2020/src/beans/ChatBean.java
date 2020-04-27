@@ -7,9 +7,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Resource;
 import javax.ejb.EJB;
 import javax.ejb.LocalBean;
 import javax.ejb.Stateless;
+import javax.jms.ConnectionFactory;
+import javax.jms.ObjectMessage;
+import javax.jms.Queue;
+import javax.jms.QueueConnection;
+import javax.jms.QueueSender;
+import javax.jms.QueueSession;
+import javax.jms.Session;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -31,10 +39,10 @@ import ws.WSEndPoint;
 @LocalBean
 public class ChatBean implements ChatRemote, ChatLocal {
 	
-	/*@Resource(mappedName = "java:/ConnectionFactory")
+	@Resource(mappedName = "java:/ConnectionFactory")
 	private ConnectionFactory connectionFactory;
 	@Resource(mappedName = "java:jboss/exported/jms/queue/mojQueue")
-	private Queue queue;*/
+	private Queue queue;
 	
 	@EJB
 	WSEndPoint ws;
@@ -84,12 +92,10 @@ public class ChatBean implements ChatRemote, ChatLocal {
 		
 		for(User u : registeredUsers.values()) {
 			if(user.getUsername().equals(u.getUsername())) {
-				System.out.println("User " + user.getUsername() + " already exists!");
 				return Response.status(409).entity("Username already exists").build();
 			}
 		}
 		this.registeredUsers.put(user.getUsername(), user);
-		System.out.println("User " + user.getUsername() + " succesfully registered.");
 		return Response.status(200).build();
 			
 	}
@@ -107,8 +113,6 @@ public class ChatBean implements ChatRemote, ChatLocal {
 					user.setLoggedIn(true);
 					this.loggedInUsers.put(user.getUsername(), user);
 				}
-								
-				System.out.println("Succesfull login for user " + user.getUsername());				
 				return Response.status(200).build();
 			}
 		}
@@ -167,6 +171,49 @@ public class ChatBean implements ChatRemote, ChatLocal {
 			return Response.status(Response.Status.BAD_REQUEST).entity("Invalid message").build();
 		}
 		
+		try {
+			QueueConnection connection = (QueueConnection) connectionFactory.createConnection("guest", "guest.guest.1");
+			QueueSession session = connection.createQueueSession(false, Session.AUTO_ACKNOWLEDGE);
+			QueueSender sender = session.createSender(queue);
+			
+			ObjectMessage objMessage = session.createObjectMessage(message);
+			sender.send(objMessage);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		sendMessageInChat(message);
+		
+		return Response.status(200).entity("Message has been sent").build();
+	}
+	
+	@POST
+	@Path("/messages/allUsers")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response sendMessageAllUsers(Message message) {
+		if (message == null || message.getSender() == null || message.getText() == null) {
+			return Response.status(Response.Status.BAD_REQUEST).entity("Invalid message").build();
+		}
+		
+		try {
+			QueueConnection connection = (QueueConnection) connectionFactory.createConnection("guest", "guest.guest.1");
+			QueueSession session = connection.createQueueSession(false, Session.AUTO_ACKNOWLEDGE);
+			QueueSender sender = session.createSender(queue);
+			
+			ObjectMessage objMessage = session.createObjectMessage(message);
+			sender.send(objMessage);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		sendMessageInChatToAll(message);
+		
+		return Response.status(200).entity("Messages have been sent").build();
+	}
+	
+	public void sendMessageInChat(Message message) {
 		LocalDateTime timestamp = LocalDateTime.now();
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm dd.MM.yyyy.");
 		String text = timestamp.format(formatter);
@@ -190,35 +237,9 @@ public class ChatBean implements ChatRemote, ChatLocal {
 			Chat chat = chats.get(key);
 			chat.getMessages().add(message);
 		}
-		
-		/*
-		ws.echoTextMessage(message.getText());
-		
-		try {
-			QueueConnection connection = (QueueConnection) connectionFactory.createConnection("guest", "guest.guest.1");
-			QueueSession session = connection.createQueueSession(false, Session.AUTO_ACKNOWLEDGE);
-			QueueSender sender = session.createSender(queue);
-			//create and publish a message
-			TextMessage message = session.createTextMessage();
-			message.setText(text);
-			sender.send(message);
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-		
-		return "OK"; 
-		*/
-		return Response.status(200).entity("Message has been sent").build();
 	}
 	
-	@POST
-	@Path("/messages/allUsers")
-	@Consumes(MediaType.APPLICATION_JSON)
-	public Response sendMessageAllUsers(Message message) {
-		if (message == null || message.getSender() == null || message.getText() == null) {
-			return Response.status(Response.Status.BAD_REQUEST).entity("Invalid message").build();
-		}
-		
+	public void sendMessageInChatToAll(Message message) {
 		LocalDateTime timestamp = LocalDateTime.now();
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm dd.MM.yyyy.");
 		String text = timestamp.format(formatter);
@@ -245,26 +266,24 @@ public class ChatBean implements ChatRemote, ChatLocal {
 				}
 			}
 		}
-		
-		return Response.status(200).entity("Messages have been sent").build();
 	}
-
+	
 	public String sortAlphabetical(String sender, String receiver) {
 		int order = sender.compareTo(receiver);
 		StringBuilder strBuilder = new StringBuilder();
 		if (order >= 0) {
-			strBuilder.append(sender);
-			strBuilder.append(":");
 			strBuilder.append(receiver);
+			strBuilder.append(":");
+			strBuilder.append(sender);
 		}
 		else {
-			strBuilder.append(receiver);
-			strBuilder.append(":");
 			strBuilder.append(sender);
+			strBuilder.append(":");
+			strBuilder.append(receiver);
 		}
-		System.out.println(strBuilder);
 		return strBuilder.toString();
 	}
+	
 	@Override
 	public String test() {
 		// TODO Auto-generated method stub

@@ -3,6 +3,7 @@ import TextField from '@material-ui/core/TextField';
 import Send from '@material-ui/icons/Send';
 import styles from './styles';
 import { withStyles } from '@material-ui/core/styles';
+import axios from 'axios'
 
 class ChatTextBoxComponent extends React.Component {
 
@@ -38,6 +39,12 @@ class ChatTextBoxComponent extends React.Component {
       this.props.submitMessageFn(this.state.chatText);
       document.getElementById('chattextbox').value = '';
     }
+    
+    console.log("batica " + this.props.receiver)
+    axios.post("http://localhost:8080/WAR2020/rest/chat/messages/user", {sender: localStorage.getItem('loginInfo'), receiver: this.props.receiver, text: this.state.chatText})
+        .then(res => {
+        })
+        .catch(err => (alert("Error"), console.log(err)));
   }
 }
 
