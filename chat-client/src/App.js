@@ -3,7 +3,7 @@ import logo from './logo.svg';
 import './App.css';
 import Login from './components/login/login';
 import Register from './components/register/register';
-import {BrowserRouter } from 'react-router-dom'
+import {HashRouter} from 'react-router-dom'
 import { Switch, Route } from 'react-router';
 import Dashboard from './components/dashboard/dashboard';
 
@@ -139,14 +139,12 @@ class App extends React.Component {
   render(){
     return (
       <div id="routing-component">
-        <BrowserRouter>
-          <Switch>
+        <HashRouter basename="/">
             <Route exact path="/" component={Login}></Route>
-            <Route path="/login" component={Login}></Route>
-            <Route path="/register" component={Register}></Route>
-            <Route path="/dashboard" component={Dashboard}></Route>
-          </Switch>
-        </BrowserRouter>
+            <Route exact path="/login" component={Login}></Route>
+            <Route exact path="/register" component={Register}></Route>
+            <Route exact path="/dashboard" component={Dashboard}></Route>
+        </HashRouter >
       </div>
     );
   }
