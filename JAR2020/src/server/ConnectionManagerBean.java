@@ -1,4 +1,4 @@
-package server;
+/*package server;
 
 import java.util.HashMap;
 import java.util.List;
@@ -38,6 +38,7 @@ public class ConnectionManagerBean implements ConnectionManager {
     
 	@Override
 	public List<Host> registerHostNode(Host host) {
+		System.out.println("Registering node");
 		ResteasyClient client = new ResteasyClientBuilder().build();
 		for (Host node : connection.getHostNodes()) {
     		ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/WAR2020/rest/connection");
@@ -47,19 +48,18 @@ public class ConnectionManagerBean implements ConnectionManager {
 
     	ResteasyWebTarget rtarget = client.target("http://" + host.getAddress() + "/WAR2020/rest/connection");
     	connection.getHostNodes().add(host);
+		System.out.println("[NODES] " + connection.getHostNodes());
     	return connection.getHostNodes();
 	}
 
 	@Override
-	public Host getHostNode(Host host) {
+	public void getHostNode(Host host) {
 		for (Host node : connection.getHostNodes()) {
 			if (node.getAlias().equals(host.getAlias())) {
-				return node;
 			}
 		}
 		
 		connection.getHostNodes().add(host);
-		return host;
 	}
 
 	@Override
@@ -91,4 +91,4 @@ public class ConnectionManagerBean implements ConnectionManager {
 		// TODO Auto-generated method stub
 		return null;
 	}	
-}
+}*/

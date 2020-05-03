@@ -13,10 +13,10 @@ public class Host implements Serializable{
 		
 	}
 	
-	public Host(String alias, String address) {
+	public Host(String address, String alias) {
 		super();
-		this.alias = alias;
 		this.address = address;
+		this.alias = alias;
 	}
 	
 	public String getAlias() {

@@ -26,8 +26,7 @@ public interface ConnectionManager {
 	@POST
 	@Path("/node")
 	@Consumes(value = MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public Host getHostNode(Host host);
+	public void getHostNode(Host host);
 	
 	@POST
 	@Path("/nodes")

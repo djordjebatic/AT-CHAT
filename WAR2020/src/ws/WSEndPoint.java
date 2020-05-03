@@ -1,6 +1,7 @@
 package ws;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,7 +19,7 @@ import javax.websocket.server.ServerEndpoint;
 @ServerEndpoint("/ws/{username}")
 @LocalBean
 public class WSEndPoint {
-	public static Map<String, Session> sessions = new HashMap<>();
+	public static Map<String, Session> sessions = Collections.synchronizedMap(new HashMap<String, Session>());
 	
 	@OnOpen
 	public void onOpen(Session session, @PathParam("username") String username) throws IOException {

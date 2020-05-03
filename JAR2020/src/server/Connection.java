@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -14,6 +15,7 @@ import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
+import javax.ws.rs.Path;
 
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
@@ -21,11 +23,13 @@ import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 
 import beans.DataBean;
 import models.Host;
+import models.User;
 import util.FileUtils;
 
 @Singleton
 @Startup
-public class Connection{
+@Path("/connection")
+public class Connection implements ConnectionManager{
 
 	@EJB
 	DataBean dataBean;
@@ -54,8 +58,9 @@ public class Connection{
 			this.master = properties.getProperty("master");			
 			System.out.println(" master: " + master + "\n host: " + this.host.getAddress() + "\n host address: " + this.host.getAlias());
 
-			if (master == null && !master.equals("")) {
-				System.out.println("MASTER...");
+			if (master != null && !master.equals("")) {
+				System.out.println("Adding slave node...");
+				dataBean.getHosts().add(this.host);
 				ResteasyClient client = new ResteasyClientBuilder().build();
 				ResteasyWebTarget rwTarget = client.target("http://" + master + "/WAR2020/rest/connection");
 				ConnectionManager rest = rwTarget.proxy(ConnectionManager.class);
@@ -124,6 +129,53 @@ public class Connection{
 	public void setHostNodes(List<Host> hostNodes) {
 		this.hostNodes = hostNodes;
 	}
-    
-    
+
+	@Override
+	public List<Host> registerHostNode(Host host) {
+		ResteasyClient client = new ResteasyClientBuilder().build();
+
+		for (Host node : dataBean.getHosts()) {
+			ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/ChatWar/rest/connection");
+			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
+			rest.getHostNode(node);
+		}
+		dataBean.getHosts().add(new Host(host.getAddress(), host.getAlias()));
+		return dataBean.getHosts();
+	}
+
+	@Override
+	public void getHostNode(Host host) {
+		System.out.println("Added host in database");
+		dataBean.getHosts().add(host);
+	}
+
+	@Override
+	public void getAllHostNodes(List<Host> hosts) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setLoggedIn(HashMap<String, User> loggedIn) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public HashMap<String, User> getLoggedIn() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void deleteHostNode(String alias) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public Host getNode() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
