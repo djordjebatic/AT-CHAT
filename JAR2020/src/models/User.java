@@ -4,20 +4,24 @@ import java.io.Serializable;
 
 public class User implements Serializable{
 	
+	private static final long serialVersionUID = 1L;
+	
 	private String username;
 	private String password;
 	private boolean loggedIn;
+	private Host host;
 	
 	public User() {
 		
 	}	
 
-	public User(String username, String password) {
+	public User(Host host, String username, String password) {
 		super();
+		this.host = host;
 		this.username = username;
 		this.password = password;
 	}
-
+	
 	public String getUsername() {
 		return username;
 	}
@@ -41,6 +45,14 @@ public class User implements Serializable{
 
 	public void setLoggedIn(boolean loggedIn) {
 		this.loggedIn = loggedIn;
+	}
+	
+	public Host getHost() {
+		return host;
+	}
+
+	public void setHost(Host host) {
+		this.host = host;
 	}
 
 	@Override

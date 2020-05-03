@@ -3,6 +3,7 @@ package server;
 import java.util.List;
 import java.util.Map;
 
+import javax.ejb.Local;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -16,6 +17,7 @@ import javax.ws.rs.core.Response;
 import models.Host;
 import models.User;
 
+//@Local
 public interface ConnectionManager {
 
 	@POST
@@ -52,6 +54,11 @@ public interface ConnectionManager {
 	@Path("/node")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Host getNode();
+	
+	@GET
+	@Path("/users/registered")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, User> getRegistered();
 	
 	@POST
 	@Path("/users/set-registered")

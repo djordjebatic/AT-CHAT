@@ -10,6 +10,8 @@ import java.util.Map;
 import javax.annotation.Resource;
 import javax.ejb.EJB;
 import javax.ejb.LocalBean;
+import javax.ejb.Singleton;
+import javax.ejb.Startup;
 import javax.ejb.Stateless;
 import javax.jms.ConnectionFactory;
 import javax.jms.ObjectMessage;
@@ -57,18 +59,24 @@ public class ChatBean {
 	@EJB
 	WSEndPoint ws;
 	
-	@EJB
-	ConnectionManager connectionManager;
+	//@EJB
+	//ConnectionManager connectionManager;
 	
-	private Map<String, User> registeredUsers = new HashMap<String, User>();
-	private Map<String, User> loggedInUsers = new HashMap<String, User>();
-	private Map<String, Chat> chats = new HashMap<String, Chat>();
+	@EJB
+	DataBean dataBean;
+	
+	@EJB
+	Connection connection;
+	
+	//private Map<String, User> registeredUsers = new HashMap<String, User>();
+	//private Map<String, User> loggedInUsers = new HashMap<String, User>();
+	//private Map<String, Chat> chats = new HashMap<String, Chat>();
 	
 	@GET
 	@Path("/users/exists/{username}")
 	@Produces(MediaType.TEXT_PLAIN)
 	public String checkExists(@PathParam("username") String username) {
-		if (registeredUsers.get(username) != null) {
+		if (dataBean.getRegisteredUsers().get(username) != null) {
 			return "yes";
 		}
 		else {
@@ -81,7 +89,7 @@ public class ChatBean {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getUserChats(@PathParam("username") String username){
 		List<Chat> userChats = new ArrayList<>();
-		for (Map.Entry<String, Chat> chat : chats.entrySet()) {
+		for (Map.Entry<String, Chat> chat : dataBean.getChats().entrySet()) {
 			for (String participant : chat.getKey().split(":")) {
 				if (username.equals(participant)) {
 					userChats.add(chat.getValue());
@@ -103,31 +111,36 @@ public class ChatBean {
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response register(User user) {
 		
-		for(User u : registeredUsers.values()) {
+		Host host = new Host(connection.getHost().getAlias(), connection.getHost().getAddress());
+		System.out.println("Registered at adress: " + host.getAddress());
+		user.setHost(host);
+		
+		for(User u : dataBean.getRegisteredUsers().values()) {
+			System.out.println(user.getUsername());
 			if(user.getUsername().equals(u.getUsername())) {
 				return Response.status(409).entity("Username already exists").build();
 			}
 		}
-		this.registeredUsers.put(user.getUsername(), user);
+		dataBean.getRegisteredUsers().put(user.getUsername(), user);
 		
-		ResteasyClient client = new ResteasyClientBuilder().build();
 		
 		for (Host h : Connection.hostNodes) {
-			ResteasyWebTarget rtarget = client.target("http://" + h.getAddress() + "/WAR2000/connection");
+			ResteasyClient client = new ResteasyClientBuilder().build();
+			ResteasyWebTarget rtarget = client.target("http://" + h.getAddress() + "/WAR2020/rest/connection");
 			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
-			rest.setRegistered(registeredUsers);
+			rest.setRegistered(dataBean.getRegisteredUsers());
 			System.out.println("Added user on another host");
 		}
 		
 		ObjectMapper mapper = new ObjectMapper();
         try {
-			String jsonMessage = mapper.writeValueAsString(registeredUsers.values());
+			String jsonMessage = mapper.writeValueAsString(dataBean.getRegisteredUsers().values());
 			ws.updateRegisteredUsers(jsonMessage);
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		}
         
-		return Response.status(200).build();
+		return Response.status(200).entity("Sucessful registration").build();
 			
 	}
 	
@@ -136,34 +149,38 @@ public class ChatBean {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response login(User user) {
-				
-		for(User u : registeredUsers.values()) {
+		
+		Host host = new Host(connection.getHost().getAlias(), connection.getHost().getAddress());
+		System.out.println("Logged in at adress: " + host.getAddress());
+		user.setHost(host);
+
+		for(User u : dataBean.getRegisteredUsers().values()) {
 			if(user.getUsername().equals(u.getUsername()) && u.getPassword().equals(user.getPassword())) {
 				
 				if (!user.isLoggedIn()) {
 					user.setLoggedIn(true);
-					this.loggedInUsers.put(user.getUsername(), user);
+					dataBean.getLoggedInUsers().put(user.getUsername(), user);
 					
 					// TRIGGER UPDATE IN OTHER NODES
 					for (Host h : Connection.hostNodes) {
 						ResteasyClient client = new ResteasyClientBuilder().build();
-						ResteasyWebTarget rwTarget = client.target("http://" + h.getAddress() + "/WAR2020/connection");
+						ResteasyWebTarget rwTarget = client.target("http://" + h.getAddress() + "/WAR2020/rest/connection");
 						ConnectionManager rest = rwTarget.proxy(ConnectionManager.class);
-						rest.setLoggedIn(this.loggedInUsers);
+						rest.setLoggedIn(dataBean.getLoggedInUsers());
 						System.out.println("User added to another host");
 					}
 					
 					
 					ObjectMapper mapper = new ObjectMapper();
 			        try {
-						String jsonMessage = mapper.writeValueAsString(loggedInUsers.values());
+						String jsonMessage = mapper.writeValueAsString(dataBean.getLoggedInUsers().values());
 						ws.updateLoggedInUsers(jsonMessage);
 					} catch (JsonProcessingException e) {
 						System.out.println("Error while informing about login");
 						e.printStackTrace();
 					}
 			        					
-					return Response.status(200).build();
+					return Response.status(200).entity("Sucessful login").build();
 				}
 			}
 		}
@@ -176,15 +193,15 @@ public class ChatBean {
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response logout(@PathParam("user") String user) {
 		
-		for(User u : loggedInUsers.values()) {
+		for(User u : dataBean.getLoggedInUsers().values()) {
 			if(u.getUsername().equals(user)) {
-				loggedInUsers.remove(u.getUsername());
+				dataBean.getLoggedInUsers().remove(u.getUsername());
 				System.out.println("User " + user + " has signed out");
 				
 				ObjectMapper mapper = new ObjectMapper();
 				
 		        try {
-					String jsonMessage = mapper.writeValueAsString(loggedInUsers.values());
+					String jsonMessage = mapper.writeValueAsString(dataBean.getLoggedInUsers().values());
 					ws.updateLoggedInUsers(jsonMessage);
 				} catch (JsonProcessingException e) {
 					System.out.println("Error while informing about login");
@@ -204,7 +221,7 @@ public class ChatBean {
 		System.out.println("==========================================================");		
 		System.out.println("LOGGED IN USERS");		
 		int i = 0;
-		for(User u : loggedInUsers.values()) {
+		for(User u : dataBean.getLoggedInUsers().values()) {
 			System.out.println("User: " + i++ + ": " + u.getUsername());
 		}
 		System.out.println("==========================================================");		
@@ -218,7 +235,7 @@ public class ChatBean {
 		System.out.println("==========================================================");
 		System.out.println("REGISTERED USERS");		
 		int i = 0;
-		for(User u : registeredUsers.values()) {
+		for(User u : dataBean.getRegisteredUsers().values()) {
 			System.out.println("User " + i++ + ": " + u.getUsername());
 		}
 		System.out.println("==========================================================");
@@ -239,6 +256,7 @@ public class ChatBean {
 			QueueSender sender = session.createSender(queue);
 			
 			ObjectMessage objMessage = session.createObjectMessage(message);
+			objMessage.setObject(message);
 			sender.send(objMessage);
 		}
 		catch (Exception e) {
@@ -264,6 +282,7 @@ public class ChatBean {
 			QueueSender sender = session.createSender(queue);
 			
 			ObjectMessage objMessage = session.createObjectMessage(message);
+			objMessage.setObject(message);
 			sender.send(objMessage);
 		}
 		catch (Exception e) {
@@ -284,7 +303,7 @@ public class ChatBean {
 		
 		String key = sortAlphabetical(message.sender, message.receiver);
 		
-		if (chats.get(key) == null) {
+		if (dataBean.getChats().get(key) == null) {
 			Chat newChat = new Chat();
 			ArrayList<String> participants = new ArrayList<>();
 			participants.add(message.sender);
@@ -293,10 +312,10 @@ public class ChatBean {
 			ArrayList<Message> messages = new ArrayList<>();
 			messages.add(message);
 			newChat.setMessages(messages);
-			chats.put(key, newChat);
+			dataBean.getChats().put(key, newChat);
 		}
 		else {
-			Chat chat = chats.get(key);
+			Chat chat = dataBean.getChats().get(key);
 			chat.getMessages().add(message);
 		}
 	}
@@ -308,11 +327,11 @@ public class ChatBean {
 		message.setDate(text);
 		System.out.println("Message to be sent from " + message.getSender() + " to everyone. Text: " + message.getText() + ". DateTime: " + timestamp);
 		
-		for (User user : registeredUsers.values()) {
+		for (User user : dataBean.getRegisteredUsers().values()) {
 			if (!message.getSender().equals(user.getUsername())) {
 				String key = sortAlphabetical(message.getSender(), user.getUsername());
 				message.setReceiver(user.getUsername());
-				if (chats.get(key) == null) {
+				if (dataBean.getChats().get(key) == null) {
 					Chat newChat = new Chat();
 					ArrayList<String> participants = new ArrayList<>();
 					participants.add(message.sender);
@@ -321,10 +340,10 @@ public class ChatBean {
 					ArrayList<Message> messages = new ArrayList<>();
 					messages.add(message);
 					newChat.setMessages(messages);
-					chats.put(key, newChat);
+					dataBean.getChats().put(key, newChat);
 				}
 				else {
-					chats.get(key).getMessages().add(message);
+					dataBean.getChats().get(key).getMessages().add(message);
 				}
 			}
 		}
@@ -363,22 +382,22 @@ public class ChatBean {
 	}
 
 	public Map<String, User> getLoggedInUsers() {
-		return loggedInUsers;
+		return dataBean.getLoggedInUsers();
 	}
 
 	public void setLoggedInUsers(Map<String, User> loggedInUsers) {
-		this.loggedInUsers = loggedInUsers;
+		dataBean.setLoggedInUsers(loggedInUsers);
 	}
 
 	public Map<String, Chat> getChats() {
-		return chats;
+		return dataBean.getChats();
 	}
 
 	public void setChats(Map<String, Chat> chats) {
-		this.chats = chats;
+		dataBean.setChats(chats);;
 	}
 
 	public void setRegisteredUsers(Map<String, User> registeredUsers) {
-		this.registeredUsers = registeredUsers;
+		dataBean.setRegisteredUsers(registeredUsers);
 	}
 }

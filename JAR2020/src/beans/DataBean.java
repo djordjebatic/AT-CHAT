@@ -5,7 +5,6 @@ import java.util.Map;
 
 import javax.ejb.LocalBean;
 import javax.ejb.Singleton;
-import javax.ejb.Startup;
 
 import models.Chat;
 import models.User;

@@ -7,10 +7,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.ejb.AccessTimeout;
 import javax.ejb.EJB;
+import javax.ejb.LocalBean;
 import javax.ejb.Schedule;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
@@ -23,22 +26,32 @@ import org.jboss.resteasy.client.jaxrs.ResteasyClient;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import beans.ChatBean;
+import beans.DataBean;
 import models.Host;
 import models.User;
 import util.FileUtils;
+import ws.WSEndPoint;
 
 @Singleton
 @Startup
 @Path("/connection")
+@LocalBean
+@AccessTimeout(value = 60, unit = TimeUnit.SECONDS)
 public class Connection implements ConnectionManager{
 
 	@EJB
-	private ChatBean chatBean;
+	private	DataBean dataBean;
 	
-	private String master = null;
+	@EJB
+	private WSEndPoint ws;
+	
+	public String master = null;
 
-	private Host host = new Host();
+	public Host host = new Host();
 	
 	public static List<Host> hostNodes = new ArrayList<Host>();
 	
@@ -67,11 +80,14 @@ public class Connection implements ConnectionManager{
 				ResteasyWebTarget rwTarget = client.target("http://" + master + "/WAR2020/rest/connection");
 				ConnectionManager rest = rwTarget.proxy(ConnectionManager.class);
 				rest.registerHostNode(this.host);
+				Host masterHost = new Host("master", master);
+				hostNodes.add(masterHost);
 				System.out.println("[REGISTERED NODES]" + hostNodes);
-				chatBean.setLoggedInUsers(rest.getLoggedIn());
-				
+				dataBean.setLoggedInUsers(rest.getLoggedIn());
+				dataBean.setRegisteredUsers(rest.getRegistered());
+
 				System.out.println("[LOGGED IN]" + "-----");
-				for (Map.Entry<String, User> u : chatBean.getLoggedInUsers().entrySet()) {
+				for (Map.Entry<String, User> u : dataBean.getLoggedInUsers().entrySet()) {
 					System.out.println(u.getKey());
 				}
 			}
@@ -81,7 +97,7 @@ public class Connection implements ConnectionManager{
 		}
 	}
 	
-    @Schedule(hour = "*", minute = "*/1",second = "0")
+    @Schedule(hour = "*", minute = "*",second = "*/15")
     public void checkHeartBeat() {
     	System.out.println("Started hearthbeat");
     	ResteasyClient client = new ResteasyClientBuilder().build();
@@ -162,13 +178,13 @@ public class Connection implements ConnectionManager{
 	public Response registerHostNode(Host host) {
 		
 		// 1ST - ADD TO MASTER
-		if (this.master != null) {
+		/*if (this.master != null || this.master != "") {
 			ResteasyClient client = new ResteasyClientBuilder().build();
 			System.out.println("http://" + this.master + "/WAR2020/rest/connection");
 			ResteasyWebTarget rtarget = client.target("http://" + this.master + "/WAR2020/connection");
 			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
 			rest.addHostNode(host);
-		}
+		}*/
 		
 		// 2ND - OTHER NODES SHOULD GET FROM MASTER NODE
 		for (Host node : hostNodes) {
@@ -201,15 +217,28 @@ public class Connection implements ConnectionManager{
 
 	@Override
 	public void setLoggedIn(Map<String, User> loggedIn) {
-		// TODO Auto-generated method stub
-		chatBean.setLoggedInUsers(loggedIn);
+		dataBean.setLoggedInUsers(loggedIn);
+		
+		try {
+			ObjectMapper mapper = new ObjectMapper();
+			String json = mapper.writeValueAsString(dataBean.getLoggedInUsers().values());
+			ws.updateLoggedInUsers(json);
+		}
+		catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
 	public Map<String, User> getLoggedIn() {
-		return chatBean.getLoggedInUsers();
+		return dataBean.getLoggedInUsers();
 	}
 
+	@Override
+	public Map<String, User> getRegistered() {
+		return dataBean.getRegisteredUsers();
+	}
+	
 	@Override
 	public boolean deleteHostNode(String alias) {
 		for (Host node : hostNodes) {
@@ -230,7 +259,16 @@ public class Connection implements ConnectionManager{
 
 	@Override
 	public void setRegistered(Map<String, User> registeredUsers) {
-		chatBean.setRegisteredUsers(registeredUsers);
+		dataBean.setRegisteredUsers(registeredUsers);
+		
+		try {
+			ObjectMapper mapper = new ObjectMapper();
+			String json = mapper.writeValueAsString(dataBean.getRegisteredUsers().values());
+			ws.updateRegisteredUsers(json);
+		}
+		catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
 	}
     
 	@PreDestroy
