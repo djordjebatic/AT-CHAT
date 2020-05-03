@@ -41,7 +41,8 @@ class ChatTextBoxComponent extends React.Component {
     }
     
     console.log("batica " + this.props.receiver)
-    axios.post("http://localhost:8080/WAR2020/rest/chat/messages/user", {sender: localStorage.getItem('loginInfo'), receiver: this.props.receiver, text: this.state.chatText})
+    const url = process.env.NODE_ENV === 'production' ? "rest/chat/messages/user" : "http://localhost:8080/WAR2020/rest/chat/messages/user"
+    axios.post(url, {sender: localStorage.getItem('loginInfo'), receiver: this.props.receiver, text: this.state.chatText})
         .then(res => {
         })
         .catch(err => (alert("Error"), console.log(err)));

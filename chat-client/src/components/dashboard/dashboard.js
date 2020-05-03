@@ -8,8 +8,6 @@ import { Button, withStyles } from '@material-ui/core';
 import axios from 'axios'
 import { withRouter } from 'react-router-dom';
 
-const client = "ws://localhost:8080/WAR2020/ws/"
-
 class DashboardComponent extends React.Component {
 
   constructor() {
@@ -65,7 +63,8 @@ class DashboardComponent extends React.Component {
   }
 
   signOut = () => {
-    axios.delete("http://localhost:8080/WAR2020/rest/chat/users/loggedIn/" + localStorage.getItem('loginInfo'))
+    const url = process.env.NODE_ENV === 'production' ? "rest/chat/users/loggedIn/" : "http://localhost:8080/WAR2020/rest/chat/users/loggedIn/"
+    axios.delete(url + localStorage.getItem('loginInfo'))
     .then(response => {
       alert('Log out successful');
     });
@@ -74,14 +73,16 @@ class DashboardComponent extends React.Component {
   };
 
   loggedIn = () => {
-    axios.get("http://localhost:8080/WAR2020/rest/chat/users/loggedIn")
+    const url = process.env.NODE_ENV === 'production' ? "rest/chat/users/loggedIn" : "http://localhost:8080/WAR2020/rest/chat/users/loggedIn"
+    axios.get(url)
     .then(response => {
       alert("Check WildFly to see logged in users.")
     });
   };
 
   registered = () => {
-    axios.get("http://localhost:8080/WAR2020/rest/chat/users/registered")
+    const url = process.env.NODE_ENV === 'production' ? "rest/chat/users/registered" : "http://localhost:8080/WAR2020/rest/chat/users/registered"
+    axios.get(url)
     .then(response => {
       alert("Check WildFly to see registered users.")
     });
@@ -128,11 +129,19 @@ class DashboardComponent extends React.Component {
 
   componentWillMount() {
 
+    var loc = window.location, uri;
+    uri = "ws:";
+    uri += "//" + loc.host;
+    uri += loc.pathname + "ws/";
+    console.log(uri);
+    const client = process.env.NODE_ENV === 'production' ? uri : "ws://localhost:8080/WAR2020/ws/";
+        
     this.websocket = new WebSocket(client + localStorage.getItem('loginInfo'));
 
     this.websocket.onopen = () => {
-      console.log('connected ' + localStorage.getItem('loginInfo'))
-      axios.get("http://localhost:8080/WAR2020/rest/chat/chats/" + localStorage.getItem('loginInfo'))
+      console.log('connected socket for user ' + localStorage.getItem('loginInfo'))
+      const url = process.env.NODE_ENV === 'production' ? "rest/chat/chats/" : "http://localhost:8080/ChatWar/rest/chat/chats/";
+      axios.get(url + localStorage.getItem('loginInfo'))
       .then(response => {
         console.log(response.data);
         this.setState({chats: response.data})
@@ -140,9 +149,9 @@ class DashboardComponent extends React.Component {
     }
 
     this.websocket.onmessage = evt => {
-        // on receiving a message, add it to the list of messages
-        console.log('sent')
-        axios.get("http://localhost:8080/WAR2020/rest/chat/chats/" + localStorage.getItem('loginInfo'))
+        console.log('socket onmessage method called')
+        const url = process.env.NODE_ENV === 'production' ? "rest/chat/chats/" : "http://localhost:8080/ChatWar/rest/chat/chats/";
+        axios.get(url + localStorage.getItem('loginInfo'))
         .then(response => {
           console.log(response.data);
           this.setState({chats: response.data})
@@ -150,7 +159,7 @@ class DashboardComponent extends React.Component {
     }
 
     this.websocket.onclose = () => {
-        console.log('disconnected')
+        console.log('disconnected socket')
         this.setState({
             websocket: new WebSocket(client + localStorage.getItem('loginInfo')),
         })

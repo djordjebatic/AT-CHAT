@@ -93,14 +93,16 @@ class NewChatComponent extends React.Component {
     }
 
     if (this.state.username === "*"){
-      axios.post("http://localhost:8080/WAR2020/rest/chat/messages/allUsers", {sender: sender, text: this.state.message})
+      const url = process.env.NODE_ENV === 'production' ? "rest/chat/messages/allUsers" : "http://localhost:8080/WAR2020/rest/chat/messages/allUsers"
+      axios.post(url, {sender: sender, text: this.state.message})
     .then(res => {
       alert('Message sent! Please refresh the page (WebSocket errors bugs still not solved)')
     })
     .catch(err => (alert("Error"), console.log(err)));
     }
     else {
-    axios.get("http://localhost:8080/WAR2020/rest/chat/users/exists/" + this.state.username)
+    const urlExists = process.env.NODE_ENV === 'production' ? "rest/chat/users/exists/" : "http://localhost:8080/WAR2020/rest/chat/users/exists/"
+    axios.get(urlExists + this.state.username)
     .then(response => {
       console.log(response.data);
       if (response.data === "no"){
@@ -108,7 +110,9 @@ class NewChatComponent extends React.Component {
         return
       }
       else {
-        axios.post("http://localhost:8080/WAR2020/rest/chat/messages/user", {sender: sender, receiver: this.state.username, text: this.state.message})
+        const urlUser = process.env.NODE_ENV === 'production' ? "rest/chat/messages/user" : "http://localhost:8080/WAR2020/rest/chat/messages/user"
+
+        axios.post(urlUser, {sender: sender, receiver: this.state.username, text: this.state.message})
         .then(res => {
           alert('Message sent! Please refresh the page (WebSocket errors bugs still not solved)')
         })

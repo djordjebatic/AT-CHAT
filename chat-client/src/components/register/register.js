@@ -92,7 +92,8 @@ class Register extends React.Component {
       return;
     }
 
-    axios.post("http://localhost:8080/WAR2020/rest/chat/users/register", {username: this.state.email, password: this.state.password})
+    const url = process.env.NODE_ENV === 'production' ? "rest/chat/users/register" : "http://localhost:8080/WAR2020/rest/chat/users/register"
+    axios.post(url, {username: this.state.email, password: this.state.password})
     .then(res => {
       alert("Succesfull registration!")
       this.props.history.push('/login');

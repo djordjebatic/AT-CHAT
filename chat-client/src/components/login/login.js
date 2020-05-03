@@ -76,7 +76,8 @@ class Login extends React.Component {
 
     var user = {username: this.state.email, password: this.state.password}
     console.log(user)
-    axios.post("http://localhost:8080/WAR2020/rest/chat/users/login", user)
+    const url = process.env.NODE_ENV === 'production' ? "rest/chat/users/login" : "http://localhost:8080/WAR2020/rest/chat/users/login"
+    axios.post(url, user)
     .then(res => {
       localStorage.setItem('loginInfo', this.state.email)
       this.props.history.push('/dashboard')

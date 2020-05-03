@@ -13,5 +13,7 @@
 			<attribute name="owner.project.facets" value="java"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="lib/jboss-cli-client.jar" sourcepath="C:/Users/Lenovo/.m2/repository/org/wildfly/core/wildfly-cli/3.0.8.Final/wildfly-cli-3.0.8.Final-sources.jar"/>
+	<classpathentry kind="lib" path="lib/jboss-client.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>
