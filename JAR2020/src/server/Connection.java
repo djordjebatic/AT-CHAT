@@ -42,7 +42,7 @@ public class Connection implements ConnectionManager{
 	
 	public static List<Host> hostNodes = new ArrayList<Host>();
 	
-	
+	//SIEBOG
 	@PostConstruct
 	private void init() {
 		try {
@@ -85,14 +85,31 @@ public class Connection implements ConnectionManager{
     	System.out.println("Started hearthbeat");
     	ResteasyClient client = new ResteasyClientBuilder().build();
     	for (Host node : hostNodes) {
-    		ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/WAR2020/rest/connection");
-    		ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
-    		Host host = rest.getNode();
-    		if(host == null) {
-    			Host host1 = rest.getNode();
-    			if (host1 == null) {
-    				removeNodeAndInformOthers(node);
-    			}
+    		// CHECK IF NODE EXISTS
+    		try{
+    			ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/WAR2020/rest/connection");
+    			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
+    			Host host = rest.getNode();
+	    		if(host == null) {
+	    			try {
+	    				// TRY CHECKING ONE MORE TIME
+	    		    	ResteasyClient client2 = new ResteasyClientBuilder().build();
+	    				ResteasyWebTarget rtarget2 = client2.target("http://" + node.getAddress() + "/WAR2020/rest/connection");
+	        			ConnectionManager rest2 = rtarget2.proxy(ConnectionManager.class);
+	        			Host host2 = rest2.getNode();
+		    			if (host2 == null) {
+		    				removeNodeAndInformOthers(node);
+		    			}
+	    			}
+	    			catch (Exception e) {
+	    				System.out.println("ERROR WHILE CHECKING HEARTHBEAT");
+	        			e.printStackTrace();
+					}
+	    		}
+    		}
+    		catch (Exception e) {
+				System.out.println("ERROR WHILE CHECKING HEARTHBEAT");
+    			e.printStackTrace();
     		}
     		
 		}
@@ -102,9 +119,14 @@ public class Connection implements ConnectionManager{
 		ResteasyClient client = new ResteasyClientBuilder().build();;
 		for (Host host : hostNodes) {
 			if (!node.getAlias().equals(host.getAlias())) {
-				ResteasyWebTarget rtarget = client.target("http://" + host.getAddress() + "/WAR2020/rest/connection");
-	    		ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
-	    		rest.deleteHostNode(node.getAlias());
+				try{
+					ResteasyWebTarget rtarget = client.target("http://" + host.getAddress() + "/WAR2020/rest/connection");
+					ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
+					rest.deleteHostNode(node.getAlias());
+				}
+				catch (Exception e) {
+					System.out.println("ERROR WHILE DELETING NODE");
+				}
 			}
 		}
 		hostNodes.remove(node);
@@ -136,12 +158,29 @@ public class Connection implements ConnectionManager{
 
 	@Override
 	public Response registerHostNode(Host host) {
-		for (Host node : hostNodes) {
+		
+		// 1ST - ADD TO MASTER
+		if (this.master != null) {
 			ResteasyClient client = new ResteasyClientBuilder().build();
-			ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/WAR2020/connection");
+			ResteasyWebTarget rtarget = client.target("http://" + this.master + "/WAR2020/connection");
 			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
 			rest.addHostNode(host);
 		}
+		
+		// 2ND - OTHER NODES SHOULD GET FROM MASTER NODE
+		for (Host node : hostNodes) {
+			try {
+				ResteasyClient client = new ResteasyClientBuilder().build();
+				ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/WAR2020/connection");
+				ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
+				rest.addHostNode(host);
+			}
+			catch (Exception e) {
+				System.out.println("ERROR WHILE ADDING A NEW NODE ");
+			}
+		}
+		
+		hostNodes.add(host);
 		return Response.status(200).build();
 	}
 
@@ -185,23 +224,6 @@ public class Connection implements ConnectionManager{
 		return this.host;
 	}
 
-	//@Override
-	public void informeHostAboutNewLogin() {
-		ResteasyClient client = new ResteasyClientBuilder().build();
-		for (Host node: hostNodes) {
-			if (node.getAlias().equals(host.getAlias())) {
-        		continue;
-        	}
-			ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/WAR2020/rest/connection");
-			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
-			rest.setLoggedIn(chatBean.getLoggedInUsers());
-		}
-		if (!host.getAddress().equals(this.master)) {
-			ResteasyWebTarget rtarget = client.target("http://" + master + "/WAR2020/rest/connection");
-			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
-			rest.setLoggedIn(chatBean.getLoggedInUsers());
-		}		
-	}
 
 	@Override
 	public void setRegistered(Map<String, User> registeredUsers) {
@@ -212,11 +234,15 @@ public class Connection implements ConnectionManager{
 	private void destroy() {
 		ResteasyClient client = new ResteasyClientBuilder().build();
 		for (Host h : hostNodes) {
-			ResteasyWebTarget rtarget = client.target("http://" + h.getAddress() + "/WAR2020/rest/connection");
-			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
-			rest.deleteHostNode(this.host.getAlias());
+			try{
+				ResteasyWebTarget rtarget = client.target("http://" + h.getAddress() + "/WAR2020/rest/connection");
+				ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
+				rest.deleteHostNode(this.host.getAlias());
+			}
+			catch (Exception e) {
+				System.out.println("ERROR WHILE DESTROYING NODE");
+				e.printStackTrace();
+			}
 		}
-
 	}
-
 }

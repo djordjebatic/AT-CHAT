@@ -1,6 +1,5 @@
 package server;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,11 +13,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.jboss.resteasy.client.jaxrs.ResteasyClient;
-import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
-import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
-
-import beans.ChatBean;
 import models.Host;
 import models.User;
 
@@ -59,8 +53,6 @@ public interface ConnectionManager {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Host getNode();
 	
-	//public void informeHostAboutNewLogin();
-
 	@POST
 	@Path("/users/set-registered")
 	@Consumes(MediaType.APPLICATION_JSON)

@@ -116,6 +116,7 @@ public class ChatBean {
 			ResteasyWebTarget rtarget = client.target("http://" + h.getAddress() + "/WAR2000/connection");
 			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
 			rest.setRegistered(registeredUsers);
+			System.out.println("Added user on another host");
 		}
 		
 		ObjectMapper mapper = new ObjectMapper();
@@ -143,11 +144,13 @@ public class ChatBean {
 					user.setLoggedIn(true);
 					this.loggedInUsers.put(user.getUsername(), user);
 					
+					// TRIGGER UPDATE IN OTHER NODES
 					for (Host h : Connection.hostNodes) {
 						ResteasyClient client = new ResteasyClientBuilder().build();
 						ResteasyWebTarget rwTarget = client.target("http://" + h.getAddress() + "/WAR2020/connection");
 						ConnectionManager rest = rwTarget.proxy(ConnectionManager.class);
 						rest.setLoggedIn(this.loggedInUsers);
+						System.out.println("User added to another host");
 					}
 					
 					
