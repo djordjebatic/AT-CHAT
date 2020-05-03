@@ -66,4 +66,15 @@ public class WSEndPoint {
 		t.printStackTrace();
 	}
 
+	public void updateRegisteredUsers(String users) {
+    	for (Session session: sessions.values()) {
+    		try {
+				session.getBasicRemote().sendText(users);
+				System.out.println("Registered users: " + users);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+    	}
+	}
+
 }

@@ -200,6 +200,11 @@ public class Connection implements ConnectionManager{
 			rest.setLoggedIn(chatBean.getLoggedInUsers());
 		}		
 	}
+
+	@Override
+	public void setRegistered(Map<String, User> registeredUsers) {
+		chatBean.setRegisteredUsers(registeredUsers);
+	}
     
 	
     

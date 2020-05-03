@@ -60,4 +60,9 @@ public interface ConnectionManager {
 	public Host getNode();
 	
 	public void informeHostAboutNewLogin();
+
+	@POST
+	@Path("/users/set-registered")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public void setRegistered(Map<String, User> registered);
 }

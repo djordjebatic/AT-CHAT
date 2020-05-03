@@ -109,6 +109,23 @@ public class ChatBean implements ChatRemote, ChatLocal {
 			}
 		}
 		this.registeredUsers.put(user.getUsername(), user);
+		
+		ResteasyClient client = new ResteasyClientBuilder().build();
+		
+		for (Host h : Connection.hostNodes) {
+			ResteasyWebTarget rtarget = client.target("http://" + h.getAddress() + "/WAR2000/connection");
+			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
+			rest.setRegistered(registeredUsers);
+		}
+		
+		ObjectMapper mapper = new ObjectMapper();
+        try {
+			String jsonMessage = mapper.writeValueAsString(registeredUsers.values());
+			ws.updateRegisteredUsers(jsonMessage);
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
+        
 		return Response.status(200).build();
 			
 	}
@@ -128,7 +145,7 @@ public class ChatBean implements ChatRemote, ChatLocal {
 					
 					ResteasyClient client = new ResteasyClientBuilder().build();
 					for (Host h : Connection.hostNodes) {
-						ResteasyWebTarget rtarget = client.target("http://" + h.getAddress() + "/ChatWAR/connection");
+						ResteasyWebTarget rtarget = client.target("http://" + h.getAddress() + "/WAR2020/connection");
 						ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
 						rest.setLoggedIn(this.loggedInUsers);
 					}
