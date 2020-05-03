@@ -14,6 +14,11 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.jboss.resteasy.client.jaxrs.ResteasyClient;
+import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
+import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
+
+import beans.ChatBean;
 import models.Host;
 import models.User;
 
@@ -37,7 +42,7 @@ public interface ConnectionManager {
 	@POST
 	@Path("/users/loggedIn")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public void setLoggedIn(HashMap<String, User> loggedIn);
+	public void setLoggedIn(Map<String, User> loggedInUsers);
 	
 	@GET
 	@Path("/users/loggedIn")
@@ -53,4 +58,6 @@ public interface ConnectionManager {
 	@Path("/node")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Host getNode();
+	
+	public void informeHostAboutNewLogin();
 }

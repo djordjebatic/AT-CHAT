@@ -28,9 +28,19 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.jboss.resteasy.client.jaxrs.ResteasyClient;
+import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
+import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import models.Chat;
+import models.Host;
 import models.Message;
 import models.User;
+import server.Connection;
+import server.ConnectionManager;
 import ws.WSEndPoint;
 
 
@@ -46,6 +56,9 @@ public class ChatBean implements ChatRemote, ChatLocal {
 	
 	@EJB
 	WSEndPoint ws;
+	
+	@EJB
+	ConnectionManager connectionManager;
 	
 	private Map<String, User> registeredUsers = new HashMap<String, User>();
 	private Map<String, User> loggedInUsers = new HashMap<String, User>();
@@ -112,8 +125,26 @@ public class ChatBean implements ChatRemote, ChatLocal {
 				if (!user.isLoggedIn()) {
 					user.setLoggedIn(true);
 					this.loggedInUsers.put(user.getUsername(), user);
+					
+					ResteasyClient client = new ResteasyClientBuilder().build();
+					for (Host h : Connection.hostNodes) {
+						ResteasyWebTarget rtarget = client.target("http://" + h.getAddress() + "/ChatWAR/connection");
+						ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
+						rest.setLoggedIn(this.loggedInUsers);
+					}
+					
+					//connectionManager.informeHostAboutNewLogin();
+					
+					ObjectMapper mapper = new ObjectMapper();
+			        try {
+						String jsonMessage = mapper.writeValueAsString(loggedInUsers.values());
+						ws.updateLoggedInUsers(jsonMessage);
+					} catch (JsonProcessingException e) {
+						e.printStackTrace();
+					}
+			        					
+					return Response.status(200).build();
 				}
-				return Response.status(200).build();
 			}
 		}
 		

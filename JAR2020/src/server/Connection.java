@@ -34,13 +34,13 @@ import util.FileUtils;
 public class Connection implements ConnectionManager{
 
 	@EJB
-	ChatBean chatBean;
+	private ChatBean chatBean;
 	
 	private String master = null;
 
 	private Host host = new Host();
 	
-	private List<Host> hostNodes = new ArrayList<Host>();
+	public static List<Host> hostNodes = new ArrayList<Host>();
 	
 	
 	@PostConstruct
@@ -60,7 +60,7 @@ public class Connection implements ConnectionManager{
 			this.master = properties.getProperty("master");			
 			System.out.println(" master: " + master + "\n host: " + this.host.getAddress() + "\n host address: " + this.host.getAlias());
 
-			if (master == null && !master.equals("")) {
+			if (master != null && !master.equals("")) {
 				System.out.println("[Slave host] ...");
 				ResteasyClient client = new ResteasyClientBuilder().build();
 				ResteasyWebTarget rwTarget = client.target("http://" + master + "/WAR2020/rest/connection");
@@ -83,7 +83,7 @@ public class Connection implements ConnectionManager{
 	
     @Schedule(hour = "*", minute = "*/1",second = "0")
     public void checkHeartBeat() {
-    	/*System.out.println("Started hearthbeat");
+    	System.out.println("Started hearthbeat");
     	ResteasyClient client = new ResteasyClientBuilder()
                 .build();
     	for (Host node : this.hostNodes) {
@@ -97,7 +97,7 @@ public class Connection implements ConnectionManager{
     			}
     		}
     		
-		}*/
+		}
     }
 
 	private void removeNodeAndInformOthers(Host node) {
@@ -160,9 +160,9 @@ public class Connection implements ConnectionManager{
 	}
 
 	@Override
-	public void setLoggedIn(HashMap<String, User> loggedIn) {
+	public void setLoggedIn(Map<String, User> loggedIn) {
 		// TODO Auto-generated method stub
-		
+		chatBean.setLoggedInUsers(loggedIn);
 	}
 
 	@Override
@@ -182,6 +182,25 @@ public class Connection implements ConnectionManager{
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	@Override
+	public void informeHostAboutNewLogin() {
+		ResteasyClient client = new ResteasyClientBuilder().build();
+		for (Host node: Connection.hostNodes) {
+			if (node.getAlias().equals(host.getAlias())) {
+        		continue;
+        	}
+			ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/WAR2020/rest/connection");
+			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
+			rest.setLoggedIn(chatBean.getLoggedInUsers());
+		}
+		if (!host.getAddress().equals(this.master)) {
+			ResteasyWebTarget rtarget = client.target("http://" + master + "/WAR2020/rest/connection");
+			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
+			rest.setLoggedIn(chatBean.getLoggedInUsers());
+		}		
+	}
     
+	
     
 }
