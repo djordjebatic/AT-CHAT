@@ -12,7 +12,6 @@ import models.User;
 
 @Singleton
 @LocalBean
-@Startup
 public class DataBean {
 
 	private Map<String, User> registeredUsers = new HashMap<String, User>();

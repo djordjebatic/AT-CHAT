@@ -1,4 +1,4 @@
-package server;
+/*package server;
 
 import java.util.HashMap;
 import java.util.List;
@@ -92,3 +92,4 @@ public class ConnectionManagerBean implements ConnectionManager {
 		return null;
 	}	
 }
+*/

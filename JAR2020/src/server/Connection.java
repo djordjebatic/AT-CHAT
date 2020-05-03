@@ -4,7 +4,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.annotation.PostConstruct;
@@ -14,21 +16,25 @@ import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
+import javax.ws.rs.Path;
+import javax.ws.rs.core.Response;
 
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 
-import beans.DataBean;
+import beans.ChatBean;
 import models.Host;
+import models.User;
 import util.FileUtils;
 
 @Singleton
 @Startup
-public class Connection{
+@Path("/connection")
+public class Connection implements ConnectionManager{
 
 	@EJB
-	DataBean dataBean;
+	ChatBean chatBean;
 	
 	private String master = null;
 
@@ -55,14 +61,19 @@ public class Connection{
 			System.out.println(" master: " + master + "\n host: " + this.host.getAddress() + "\n host address: " + this.host.getAlias());
 
 			if (master == null && !master.equals("")) {
-				System.out.println("MASTER...");
+				System.out.println("[Slave host] ...");
 				ResteasyClient client = new ResteasyClientBuilder().build();
 				ResteasyWebTarget rwTarget = client.target("http://" + master + "/WAR2020/rest/connection");
 				ConnectionManager rest = rwTarget.proxy(ConnectionManager.class);
-				this.hostNodes = rest.registerHostNode(this.host);
+				rest.registerHostNode(host);
 				System.out.println("[Registration successful]");
-
-				System.out.println(this.hostNodes);
+				hostNodes.remove(host);
+				System.out.println("[NODES]" + this.hostNodes);
+				chatBean.setLoggedInUsers(rest.getLoggedIn());
+				
+				for (Map.Entry<String, User> u : chatBean.getLoggedInUsers().entrySet()) {
+					System.out.println(u.getKey());
+				}
 			}
 			
 		}catch (Exception e) {
@@ -72,7 +83,7 @@ public class Connection{
 	
     @Schedule(hour = "*", minute = "*/1",second = "0")
     public void checkHeartBeat() {
-    	System.out.println("Started hearthbeat");
+    	/*System.out.println("Started hearthbeat");
     	ResteasyClient client = new ResteasyClientBuilder()
                 .build();
     	for (Host node : this.hostNodes) {
@@ -86,7 +97,7 @@ public class Connection{
     			}
     		}
     		
-		}
+		}*/
     }
 
 	private void removeNodeAndInformOthers(Host node) {
@@ -123,6 +134,53 @@ public class Connection{
 
 	public void setHostNodes(List<Host> hostNodes) {
 		this.hostNodes = hostNodes;
+	}
+
+	@Override
+	public Response registerHostNode(Host host) {
+		for (Host node : hostNodes) {
+			ResteasyClient client = new ResteasyClientBuilder().build();
+			ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/ChatWAR/connection");
+			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
+			rest.addHostNode(host);
+		}
+		return Response.status(200).build();
+	}
+
+	@Override
+	public void addHostNode(Host host) {
+		hostNodes.add(host);
+	}
+
+	@Override
+	public Response getAllHostNodes(List<Host> hosts) {
+		return null;
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setLoggedIn(HashMap<String, User> loggedIn) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public Map<String, User> getLoggedIn() {
+		return chatBean.getLoggedInUsers();
+	}
+
+	@Override
+	public boolean deleteHostNode(String alias) {
+		return false;
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public Host getNode() {
+		// TODO Auto-generated method stub
+		return null;
 	}
     
     
