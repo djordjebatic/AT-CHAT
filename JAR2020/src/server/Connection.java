@@ -49,8 +49,8 @@ public class Connection implements ConnectionManager{
 	        MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
             ObjectName http = new ObjectName("jboss.as:socket-binding-group=standard-sockets,socket-binding=http");
 
-            host.setAddress((String) mBeanServer.getAttribute(http,"boundAddress") + ":8080");
-            host.setAlias(System.getProperty("jboss.node.name") + ":8080");
+            this.host.setAddress((String) mBeanServer.getAttribute(http,"boundAddress") + ":8080");
+            this.host.setAlias(System.getProperty("jboss.node.name") + ":8080");
 
 			File f = FileUtils.getFile(ConnectionManager.class, "", "connections.properties");
 			FileInputStream fileInput = new FileInputStream(f);
@@ -63,9 +63,10 @@ public class Connection implements ConnectionManager{
 			if (master != null && !master.equals("")) {
 				System.out.println("[Slave host] ...");
 				ResteasyClient client = new ResteasyClientBuilder().build();
+				System.out.println("http://" + master + "/WAR2020/rest/connection");
 				ResteasyWebTarget rwTarget = client.target("http://" + master + "/WAR2020/rest/connection");
 				ConnectionManager rest = rwTarget.proxy(ConnectionManager.class);
-				rest.registerHostNode(host);
+				rest.registerHostNode(this.host);
 				System.out.println("[REGISTERED NODES]" + hostNodes);
 				chatBean.setLoggedInUsers(rest.getLoggedIn());
 				
@@ -87,6 +88,7 @@ public class Connection implements ConnectionManager{
     	for (Host node : hostNodes) {
     		// CHECK IF NODE EXISTS
     		try{
+				System.out.println("http://" + node.getAddress() + "/WAR2020/rest/connection");
     			ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/WAR2020/rest/connection");
     			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
     			Host host = rest.getNode();
@@ -162,6 +164,7 @@ public class Connection implements ConnectionManager{
 		// 1ST - ADD TO MASTER
 		if (this.master != null) {
 			ResteasyClient client = new ResteasyClientBuilder().build();
+			System.out.println("http://" + this.master + "/WAR2020/rest/connection");
 			ResteasyWebTarget rtarget = client.target("http://" + this.master + "/WAR2020/connection");
 			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
 			rest.addHostNode(host);
