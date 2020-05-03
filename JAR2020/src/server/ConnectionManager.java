@@ -59,7 +59,7 @@ public interface ConnectionManager {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Host getNode();
 	
-	public void informeHostAboutNewLogin();
+	//public void informeHostAboutNewLogin();
 
 	@POST
 	@Path("/users/set-registered")

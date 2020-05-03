@@ -47,7 +47,7 @@ import ws.WSEndPoint;
 @Stateless
 @Path("/chat")
 @LocalBean
-public class ChatBean implements ChatRemote, ChatLocal {
+public class ChatBean {
 	
 	@Resource(mappedName = "java:/ConnectionFactory")
 	private ConnectionFactory connectionFactory;
@@ -143,20 +143,20 @@ public class ChatBean implements ChatRemote, ChatLocal {
 					user.setLoggedIn(true);
 					this.loggedInUsers.put(user.getUsername(), user);
 					
-					ResteasyClient client = new ResteasyClientBuilder().build();
 					for (Host h : Connection.hostNodes) {
-						ResteasyWebTarget rtarget = client.target("http://" + h.getAddress() + "/WAR2020/connection");
-						ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
+						ResteasyClient client = new ResteasyClientBuilder().build();
+						ResteasyWebTarget rwTarget = client.target("http://" + h.getAddress() + "/WAR2020/connection");
+						ConnectionManager rest = rwTarget.proxy(ConnectionManager.class);
 						rest.setLoggedIn(this.loggedInUsers);
 					}
 					
-					//connectionManager.informeHostAboutNewLogin();
 					
 					ObjectMapper mapper = new ObjectMapper();
 			        try {
 						String jsonMessage = mapper.writeValueAsString(loggedInUsers.values());
 						ws.updateLoggedInUsers(jsonMessage);
 					} catch (JsonProcessingException e) {
+						System.out.println("Error while informing about login");
 						e.printStackTrace();
 					}
 			        					
@@ -177,6 +177,17 @@ public class ChatBean implements ChatRemote, ChatLocal {
 			if(u.getUsername().equals(user)) {
 				loggedInUsers.remove(u.getUsername());
 				System.out.println("User " + user + " has signed out");
+				
+				ObjectMapper mapper = new ObjectMapper();
+				
+		        try {
+					String jsonMessage = mapper.writeValueAsString(loggedInUsers.values());
+					ws.updateLoggedInUsers(jsonMessage);
+				} catch (JsonProcessingException e) {
+					System.out.println("Error while informing about login");
+					e.printStackTrace();
+				}
+		        
 				return Response.status(200).build();
 			}
 		}
@@ -330,18 +341,6 @@ public class ChatBean implements ChatRemote, ChatLocal {
 			strBuilder.append(receiver);
 		}
 		return strBuilder.toString();
-	}
-	
-	@Override
-	public String test() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String post(String text) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	public ConnectionFactory getConnectionFactory() {

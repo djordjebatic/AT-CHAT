@@ -41,18 +41,7 @@ public class WSEndPoint {
 			e.printStackTrace();
 		}
 	}
-
-    public void updateLoggedInUsers(String users) {
-    	for (Session session: sessions.values()) {
-    		try {
-				session.getBasicRemote().sendText(users);
-				System.out.println("Logged in users: " + users);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-    	}
-    }
-    
+   
 	@OnClose
 	public void close(Session session, @PathParam("username")String username) throws IOException{
 		sessions.remove(username);
@@ -66,6 +55,17 @@ public class WSEndPoint {
 		t.printStackTrace();
 	}
 
+    public void updateLoggedInUsers(String users) {
+    	for (Session session: sessions.values()) {
+    		try {
+				session.getBasicRemote().sendText(users);
+				System.out.println("Logged in users: " + users);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+    	}
+    }
+    
 	public void updateRegisteredUsers(String users) {
     	for (Session session: sessions.values()) {
     		try {

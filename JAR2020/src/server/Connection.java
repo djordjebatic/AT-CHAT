@@ -4,12 +4,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.ejb.EJB;
 import javax.ejb.Schedule;
 import javax.ejb.Singleton;
@@ -66,11 +66,10 @@ public class Connection implements ConnectionManager{
 				ResteasyWebTarget rwTarget = client.target("http://" + master + "/WAR2020/rest/connection");
 				ConnectionManager rest = rwTarget.proxy(ConnectionManager.class);
 				rest.registerHostNode(host);
-				System.out.println("[Registration successful]");
-				hostNodes.remove(host);
-				System.out.println("[NODES]" + this.hostNodes);
+				System.out.println("[REGISTERED NODES]" + hostNodes);
 				chatBean.setLoggedInUsers(rest.getLoggedIn());
 				
+				System.out.println("[LOGGED IN]" + "-----");
 				for (Map.Entry<String, User> u : chatBean.getLoggedInUsers().entrySet()) {
 					System.out.println(u.getKey());
 				}
@@ -84,9 +83,8 @@ public class Connection implements ConnectionManager{
     @Schedule(hour = "*", minute = "*/1",second = "0")
     public void checkHeartBeat() {
     	System.out.println("Started hearthbeat");
-    	ResteasyClient client = new ResteasyClientBuilder()
-                .build();
-    	for (Host node : this.hostNodes) {
+    	ResteasyClient client = new ResteasyClientBuilder().build();
+    	for (Host node : hostNodes) {
     		ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/WAR2020/rest/connection");
     		ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
     		Host host = rest.getNode();
@@ -102,14 +100,14 @@ public class Connection implements ConnectionManager{
 
 	private void removeNodeAndInformOthers(Host node) {
 		ResteasyClient client = new ResteasyClientBuilder().build();;
-		for (Host host : this.hostNodes) {
+		for (Host host : hostNodes) {
 			if (!node.getAlias().equals(host.getAlias())) {
 				ResteasyWebTarget rtarget = client.target("http://" + host.getAddress() + "/WAR2020/rest/connection");
 	    		ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
 	    		rest.deleteHostNode(node.getAlias());
 			}
 		}
-		this.hostNodes.remove(node);
+		hostNodes.remove(node);
 	}
 
 	public String getMaster() {
@@ -132,15 +130,15 @@ public class Connection implements ConnectionManager{
 		return hostNodes;
 	}
 
-	public void setHostNodes(List<Host> hostNodes) {
-		this.hostNodes = hostNodes;
+	public void setHostNodes(List<Host> nodes) {
+		hostNodes = nodes;
 	}
 
 	@Override
 	public Response registerHostNode(Host host) {
 		for (Host node : hostNodes) {
 			ResteasyClient client = new ResteasyClientBuilder().build();
-			ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/ChatWAR/connection");
+			ResteasyWebTarget rtarget = client.target("http://" + node.getAddress() + "/WAR2020/connection");
 			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
 			rest.addHostNode(host);
 		}
@@ -172,21 +170,25 @@ public class Connection implements ConnectionManager{
 
 	@Override
 	public boolean deleteHostNode(String alias) {
+		for (Host node : hostNodes) {
+			if (node.getAlias().equals(alias)) {
+				hostNodes.remove(node);
+				System.out.println("Deleted node " + node);
+				return true;
+			}
+		}
 		return false;
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public Host getNode() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.host;
 	}
 
-	@Override
+	//@Override
 	public void informeHostAboutNewLogin() {
 		ResteasyClient client = new ResteasyClientBuilder().build();
-		for (Host node: Connection.hostNodes) {
+		for (Host node: hostNodes) {
 			if (node.getAlias().equals(host.getAlias())) {
         		continue;
         	}
@@ -206,6 +208,15 @@ public class Connection implements ConnectionManager{
 		chatBean.setRegisteredUsers(registeredUsers);
 	}
     
-	
-    
+	@PreDestroy
+	private void destroy() {
+		ResteasyClient client = new ResteasyClientBuilder().build();
+		for (Host h : hostNodes) {
+			ResteasyWebTarget rtarget = client.target("http://" + h.getAddress() + "/WAR2020/rest/connection");
+			ConnectionManager rest = rtarget.proxy(ConnectionManager.class);
+			rest.deleteHostNode(this.host.getAlias());
+		}
+
+	}
+
 }
